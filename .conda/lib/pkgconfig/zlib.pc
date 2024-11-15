@@ -1,0 +1,13 @@
+prefix=/home/youngjin/Downloads/robotics/.conda
+exec_prefix=/home/youngjin/Downloads/robotics/.conda
+libdir=/home/youngjin/Downloads/robotics/.conda/lib
+sharedlibdir=/home/youngjin/Downloads/robotics/.conda/lib
+includedir=/home/youngjin/Downloads/robotics/.conda/include
+
+Name: zlib
+Description: zlib compression library
+Version: 1.2.13
+
+Requires:
+Libs: -L${libdir} -L${sharedlibdir} -lz
+Cflags: -I${includedir}

@@ -43,12 +43,15 @@ def main():
         elif mode == 2: # left  
             motor.run_motor_mode([1,2,4,5,7,8,10,11], mode, delay=0.5)
         '''
-        motor.move_front([1,2,4,5,7,8,10,11], delay=0.5)
+        motor.turn_start_left([1,2,4,5,7,8,10,11], delay=0.5)
         time.sleep(1)
-        motor.turn_right([1,2,4,5,7,8,10,11], delay=0.5)
-        time.sleep(1)
-        motor.turn_left([1,2,4,5,7,8,10,11], delay=0.5)
-        time.sleep(1)
+
+        # motor.move_front([1,2,4,5,7,8,10,11], delay=0.5)
+        # time.sleep(1)
+        # motor.turn_right([1,2,4,5,7,8,10,11], delay=0.5)
+        # time.sleep(1)
+        # motor.turn_left([1,2,4,5,7,8,10,11], delay=0.5)
+        # time.sleep(1)
 
 if __name__ == '__main__':
     main()

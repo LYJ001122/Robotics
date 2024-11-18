@@ -216,7 +216,27 @@ class Motor():
             for motor_id in motor_ids:
                 self.run_motor(motor_id, self.angles_left[motor_id - 1][step])
             time.sleep(delay)
-            
+
+    def turn_super_left(self, motor_ids, step=None, delay=0):
+        if step is None:
+            for i in range(self.angles_left.shape[1]):
+                for motor_id in motor_ids:
+                    self.run_motor(motor_id, self.angles_left[motor_id - 1][i])
+                time.sleep(delay)
+            self.move_front(motor_ids, step=0, delay=0.5)
+
+        else:
+            for motor_id in motor_ids:
+                self.run_motor(motor_id, self.angles_left[motor_id - 1][step])
+            self.move_front(motor_ids, step=0, delay=0.5)
+            time.sleep(delay)
+
+    def turn_start_left(self, motor_ids, step=None, delay=0):
+        self.turn_super_left(motor_ids, step=None, delay=0.5)
+        self.turn_super_left(motor_ids, step=None, delay=0.5)
+        self.turn_super_left(motor_ids, step=None, delay=0.5)
+        self.turn_left(motor_ids, step=None, delay=0.5)
+
     '''
         motor_vertical_distance = [[14.405, 14.604, 13.193, 10.283, 14.142],    # motor_idx: 1(left_back_big), 2(left_back_small)
                                    [14.142, 13.807, 5.738, 10.283, 13.482],     # motor_idx: 4(left_front_big), 5(left_front_small)
@@ -466,5 +486,4 @@ class Motor():
         raw_angle2 = int(beta / 2 / PI * 4095) +1
 
         return raw_angle1, raw_angle2
-    
     

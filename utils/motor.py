@@ -1,9 +1,14 @@
 from dynamixel_sdk import *                    # Dynamixel SDK 모듈 임포트
 import numpy as np
+from numpy import pi as PI
+from numpy import cos as COS
+from numpy import sin as SIN
+from numpy import arctan as ARCTAN
+from numpy import arccos as ARCCOS
 
 class Motor():
     def __init__(self):
-        self.DEVICENAME = '/dev/dynamixel'                    # 통신 포트 설정 (시스템에 맞게 변경)
+        self.DEVICENAME = '/dev/ttyUSB_dynamixel'           # '/dev/dynamixel'                    # 통신 포트 설정 (시스템에 맞게 변경)
         self.BAUDRATE = 57600                               # 보레이트 설정
         self.PROTOCOL_VERSION = 2.0                         # 프로토콜 버전 설정
         self.ADDR_TORQUE_ENABLE = 64                        # Torque Enable 주소
@@ -20,7 +25,7 @@ class Motor():
         self.ADDR_MIN_POSITION_LIMIT = 52                    # mx-28의 최소 위치 제한 주소
         self.ADDR_MAX_POSITION_LIMIT = 48                   # mx-28/64 의 최대 위치 제한 주소
         self.ADDR_MOVING_SPEED = 32
-
+        self.ADDR_PROFILE_VELOCITY = 112
 
         self.MOTOR_NUM = 12
         self.MOTOR_IDS = range(1, self.MOTOR_NUM+1)                          # 모터 ID 리스트
@@ -77,8 +82,16 @@ class Motor():
             else:
                 print(f"모터 {motor_id} Torque 활성화 성공")
 
-        print("========================== 모터 초기화 완료 ==========================")
+        #! 모터 속도 설정
+        for motor_id in self.MOTOR_IDS:
+            dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(self.port_handler, motor_id, self.ADDR_PROFILE_VELOCITY, data=30)
+            if dxl_comm_result != COMM_SUCCESS:
+                print(f"Error setting velocity: {self.packet_handler.getTxRxResult(dxl_comm_result)}")
+            elif dxl_error != 0:
+                print(f"Error detected: {self.packet_handler.getRxPacketError(dxl_error)}")
 
+        print("========================== 모터 초기화 완료 ==========================")
+    
     # def get_init_pose(self):
     #     # 초기 위치 설정
     #     init_pose = {
@@ -123,30 +136,6 @@ class Motor():
     #     max_value = init_angle + 430
     #     safe_angle = np.clip(init_angle, min=min_value, max=max_value)
     #     return safe_angle
-
-    def get_step_angle_delta(self):
-        angle_deltas = []
-        motor_direction = [1, 1, -1, -1]
-        motor_deltas = [[100, 200, 300, -200, 0], [150, 500, 500, -420, 0], [0, 0, 0, 0, 0],
-                        [0, 220, 220, -200, -200], [0, 300, -420, -420, -200], [0, 0, 0, 0, 0], 
-                        [0, -220, -220, 200, 200], [0, -300, 420, 420, 200], [0, 0, 0, 0, 0],
-                        [-100, -200, -300, 200, 0], [-150, -500, -500, 420, 0], [0, 0, 0, 0, 0]
-                        ]
-        
-        # for i in range(4):
-        #     for j in range(3):
-        #         angle_deltas.append([x * motor_direction[i] for x in motor_deltas[j]])
-        angle_deltas = motor_deltas
-
-        return angle_deltas
-    
-    def get_step_angle(self):
-        angle_deltas = self.get_step_angle_delta()
-        self.angles = []
-        for i in range(12):
-            self.angles.append([self.init_pose[i+1]+x for x in angle_deltas[i]])
-
-        return self.angles
         
 
     def read_angle(self, motor_id):
@@ -176,6 +165,67 @@ class Motor():
         for motor_id in motor_ids:
             self.run_motor(motor_id, self.angles[motor_id - 1][step])
         time.sleep(delay)
+
+    def get_step_position(self):   
+        '''
+        motor_vertical_distance = [[14.405, 14.604, 13.193, 10.283, 14.142],    # motor_idx: 1(left_back_big), 2(left_back_small)
+                                   [14.142, 13.807, 5.738, 10.283, 13.482],     # motor_idx: 4(left_front_big), 5(left_front_small)
+                                   [14.142, 13.807, 5.738, 10.283, 13.482],     # motor_idx: 7(right_front_big), 8(right_front_small)
+                                   [14.405, 14.604, 13.193, 10.283, 14.142]]    # motor_idx: 10(right_back_big), 11(right_back_small)
+        '''
+        motor_vertical_distance = [[-2, -2, -2, 0, 0, 0, 0, ],    # motor_idx: 1(left_back_big), 2(left_back_small)
+                                   [0, 0, 0, 0, -2, -2, -2],     # motor_idx: 4(left_front_big), 5(left_front_small)
+                                   [0, 0, 0, 0, -2, -2, -2],     # motor_idx: 7(right_front_big), 8(right_front_small)
+                                   [-2, -2, -2, 0, 0, 0, 0]]    # motor_idx: 10(right_back_big), 11(right_back_small)
+        
+        #* for init state
+        # motor_vertical_distance = np.array(motor_vertical_distance) - 14.142    # 13562373095
+        
+
+        motor_horizontal_distance = [[-2.5, -6.5, -6.5, 5.295, 1.5],        # motor_idx: 1(left_back_big), 2(left_back_small)
+                                     [0, -4, 0.887, 5.295, 4],          # motor_idx: 4(left_front_big), 5(left_front_small)
+                                     [0, -4, 0.887, 5.295, 4],          # motor_idx: 7(right_front_big), 8(right_front_small)
+                                     [-2.5, -6.5, -6.5, 5.295, 1.5]]        # motor_idx: 10(right_back_big), 11(right_back_small)
+        
+
+        motor_vertical_distance = [[0, 0, 0, 0, 0, 3, 3, 3, 0,              0, -3, -3, -3, 0, 1, -3, 0, 0],
+                                   [0, 1, -3, 0, 0, -3, -3, -3, 0,        0, 3, 3, 3, 0, 0, 0, 0, 0],
+                                   [0, 3, 3, 3, 0, 0, 0, 0, 0,              0, 1, -3, 0, 0, -3, -3, -3, 0],
+                                   [0, -3, -3, -3, 0, 1, -3, 0, 0,        0, 0, 0, 0, 0, 3, 3, 3, 0]]
+
+        motor_horizontal_distance = [[0, 0, 0, 0, 0, 0, 0, 0, 0,            -4, -4, -4, -4, -4, -4, 0, 4, 4],
+                                     [-4, -4, 0, 4, 4, 4, 4, 4, 4,          0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                     [0, 0, 0, 0, 0, 0, 0, 0, 0,            -4, -4, 0, 4, 4, 4, 4, 4, 4],
+                                     [-4, -4, -4, -4, -4, -4, 0, 4, 4,      0, 0, 0, 0, 0, 0, 0, 0, 0]]
+
+        
+        
+        motor_horizontal_distance = np.array(motor_horizontal_distance)
+        motor_vertical_distance = np.array(motor_vertical_distance)
+
+        return motor_vertical_distance, motor_horizontal_distance
+
+    def convert_positions_to_angles(self):
+        vertical_positions, horizontal_positions = self.get_step_position()
+        vertical_positions = vertical_positions + 14.142
+        _, step_num = horizontal_positions.shape
+        motor_angle_list = np.zeros((12, step_num), dtype=float)
+
+        for leg_idx in range(4):
+            for step in range(step_num):
+                vertical_distance = vertical_positions[leg_idx][step]
+                horizontal_distance = horizontal_positions[leg_idx][step]
+
+                big_motor_angle, small_motor_angle = self.distance_to_angle(motor_id=leg_idx*3+1, vertical_distance=vertical_distance, horizontal_distance=horizontal_distance)
+                motor_angle_list[leg_idx*3][step] = big_motor_angle
+                motor_angle_list[leg_idx*3+1][step] = small_motor_angle
+        # float to int
+        motor_angle_list = motor_angle_list.astype(int)
+        self.angles = motor_angle_list
+        
+        return motor_angle_list
+
+
 
     # def safe_small(init_angle):
     #     return np.clip(init_angle, min=, max=)
@@ -233,9 +283,9 @@ class Motor():
             1: (1648, 2448),
             2: (1598, 2548),
             4: (1648, 2448),
-            5: (1628, 2348),
+            5: (1628, 2400),
             7: (1648, 2448),
-            8: (1748, 2468),
+            8: (1700, 2468),
             10: (1648, 2448),
             11: (1548, 2498),
             # 나머지 모터별로 원하는 제한 범위를 추가
@@ -244,3 +294,85 @@ class Motor():
 
         for motor_id, (min_limit, max_limit) in position_limits.items():
             self.set_position_limits(motor_id, min_limit, max_limit)
+
+    def angle_to_distance(self, motor_id, raw_angle1, raw_angle2):
+        # 모터 각도를 이용한 변환식
+        alpha = raw_angle1 / 4096 * 2 * PI
+        beta = raw_angle2 / 4096 * 2 * PI
+
+        if motor_id == 7:                          # right_front
+            alpha = alpha - 0.75*PI
+            beta = beta - 0.5*PI
+            
+            x = 10*COS(alpha) - 10*COS(0.75*PI-beta)
+            y = 10*SIN(alpha) + 10*SIN(0.75*PI-beta)
+
+            vertical_distance = y
+            horizontal_distance = -x
+            print()
+        elif motor_id == 4:                        # left_front
+            alpha = alpha - 0.25*PI
+            beta = beta - 0.5*PI
+
+            x = 10*COS(alpha) + 10*COS(beta-0.25*PI)
+            y = 10*SIN(alpha) + 10*SIN(beta-0.25*PI)
+
+            vertical_distance = y
+            horizontal_distance = x
+            print()
+        elif motor_id == 10:                        # right_back
+            alpha = alpha - 0.75*PI
+            beta = 1.5*PI - beta
+
+            x = 10*COS(alpha) - 10*COS(beta-0.25*PI)
+            y = 10*SIN(alpha) + 10*SIN(beta-0.25*PI)
+
+            vertical_distance = y
+            horizontal_distance = -x
+            print()
+        elif motor_id == 1:                         # left_back
+            alpha = alpha - 0.25*PI
+            beta = 1.5*PI - beta
+            
+            x = 10*COS(alpha) + 10*COS(0.75*PI-beta)
+            y = 10*SIN(alpha) + 10*SIN(0.75*PI-beta)
+
+            vertical_distance = y
+            horizontal_distance = x
+            print()
+        else:
+            print("모터 ID 오류")
+            return None
+        
+        return vertical_distance, horizontal_distance
+    
+    def distance_to_angle(self, motor_id, vertical_distance, horizontal_distance):
+        if motor_id == 7 or motor_id == 10:                          # right_front, right_back
+            alpha = ARCTAN(horizontal_distance/vertical_distance) + 0.5*ARCCOS(1-(horizontal_distance**2+vertical_distance**2)/200)
+            beta = 0.75*PI - 0.5*ARCCOS(1-(horizontal_distance**2+vertical_distance**2)/200) + ARCTAN(horizontal_distance/vertical_distance)
+
+            # 기준점 -> 180도 init_pose
+            alpha = alpha + 0.75*PI
+            beta = beta + 0.5*PI
+        elif motor_id == 4 or motor_id == 1:                        # left_front, left_back
+            alpha = ARCTAN(horizontal_distance/vertical_distance) + 0.5*ARCCOS(1-(horizontal_distance**2+vertical_distance**2)/200)
+            beta = 0.75*PI - 0.5*ARCCOS(1-(horizontal_distance**2+vertical_distance**2)/200) + ARCTAN(horizontal_distance/vertical_distance)
+            
+            # 기준점 -> 180도 init_pose
+            alpha = alpha + 0.75*PI
+            beta = beta + 0.5*PI
+
+            # 반대쪽다리는 360-각도
+            alpha = 2*PI - alpha
+            beta = 2*PI - beta
+        else:
+            print("모터 ID 오류")
+            return None
+        
+        #todo: 0-4095 range check
+        raw_angle1 = int(alpha / 2 / PI * 4095) + 1
+        raw_angle2 = int(beta / 2 / PI * 4095) +1
+
+        return raw_angle1, raw_angle2
+    
+    

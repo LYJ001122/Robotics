@@ -4,9 +4,9 @@ import cv2
 
 def main():
     motor = Motor()
-    angles = motor.convert_positions_to_angles()
-    # motor.initialize_position_limits()
-    print(angles)
+    mode = 0
+    # motor.initialize_
+    
     
 
 
@@ -33,11 +33,22 @@ def main():
 
     #     motor.run_motor_step([1, 2, 7, 8], 0)
     #     motor.run_motor_step([4, 5, 10, 11], 1, delay=1)
-    while True:
-        for i in range(18):
-            motor.run_motor_step([1,2,4,5,7,8,10,11], i, delay=0.5)
-        
 
+    while True:
+        '''
+        if mode == 0:   # Forward
+            motor.run_motor_mode([1,2,4,5,7,8,10,11], mode, delay=0.5)
+        elif mode == 1: # right
+            motor.run_motor_mode([1,2,4,5,7,8,10,11], mode, delay=0.5)
+        elif mode == 2: # left  
+            motor.run_motor_mode([1,2,4,5,7,8,10,11], mode, delay=0.5)
+        '''
+        motor.move_front([1,2,4,5,7,8,10,11], delay=0.5)
+        time.sleep(1)
+        motor.turn_right([1,2,4,5,7,8,10,11], delay=0.5)
+        time.sleep(1)
+        motor.turn_left([1,2,4,5,7,8,10,11], delay=0.5)
+        time.sleep(1)
 
 if __name__ == '__main__':
     main()

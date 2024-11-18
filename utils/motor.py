@@ -48,6 +48,11 @@ class Motor():
             12: 2377,
         }
 
+
+        self.angles_forward = self.convert_positions_to_angles(self.get_step_position_forward())
+        self.angles_right = self.convert_positions_to_angles(self.get_step_position_right())
+        self.angles_left = self.convert_positions_to_angles(self.get_step_position_left())
+
         if not self.port_handler.openPort():
             print("포트를 열 수 없습니다.")
             exit()
@@ -161,52 +166,141 @@ class Motor():
 
         return dxl_comm_result==COMM_SUCCESS and dxl_error==0
     
-    def run_motor_step(self, motor_ids, step, delay = 0):
-        for motor_id in motor_ids:
-            self.run_motor(motor_id, self.angles[motor_id - 1][step])
-        time.sleep(delay)
+    def run_motor_mode(self, motor_ids, mode, step = None, delay = 0):
+        if mode == 0:  # forward
+            angles = self.angles_forward
+        elif mode == 1:  # right
+            angles = self.angles_right
+        elif mode == 2:  # left
+            angles = self.angles_left
+        
+        if step is None:
+            for i in range(angles.shape[1]):
+                for motor_id in motor_ids:
+                    self.run_motor(motor_id, angles[motor_id - 1][i])
+                time.sleep(delay)
+        else:
+            for motor_id in motor_ids:
+                self.run_motor(motor_id, self.angles[motor_id - 1][step])
+            time.sleep(delay)
 
-    def get_step_position(self):   
-        '''
+    def move_front(self, motor_ids, step=None, delay=0):
+        if step is None:
+            for i in range(self.angles_forward.shape[1]):
+                for motor_id in motor_ids:
+                    self.run_motor(motor_id, self.angles_forward[motor_id - 1][i])
+                time.sleep(delay)
+        else:
+            for motor_id in motor_ids:
+                self.run_motor(motor_id, self.angles_forward[motor_id - 1][step])
+            time.sleep(delay)
+
+    def turn_right(self, motor_ids, step=None, delay=0):
+        if step is None:
+            for i in range(self.angles_right.shape[1]):
+                for motor_id in motor_ids:
+                    self.run_motor(motor_id, self.angles_right[motor_id - 1][i])
+                time.sleep(delay)
+        else:
+            for motor_id in motor_ids:
+                self.run_motor(motor_id, self.angles_right[motor_id - 1][step])
+            time.sleep(delay)
+
+    def turn_left(self, motor_ids, step=None, delay=0):
+        if step is None:
+            for i in range(self.angles_left.shape[1]):
+                for motor_id in motor_ids:
+                    self.run_motor(motor_id, self.angles_left[motor_id - 1][i])
+                time.sleep(delay)
+        else:
+            for motor_id in motor_ids:
+                self.run_motor(motor_id, self.angles_left[motor_id - 1][step])
+            time.sleep(delay)
+            
+    '''
         motor_vertical_distance = [[14.405, 14.604, 13.193, 10.283, 14.142],    # motor_idx: 1(left_back_big), 2(left_back_small)
                                    [14.142, 13.807, 5.738, 10.283, 13.482],     # motor_idx: 4(left_front_big), 5(left_front_small)
                                    [14.142, 13.807, 5.738, 10.283, 13.482],     # motor_idx: 7(right_front_big), 8(right_front_small)
                                    [14.405, 14.604, 13.193, 10.283, 14.142]]    # motor_idx: 10(right_back_big), 11(right_back_small)
-        '''
-        motor_vertical_distance = [[-2, -2, -2, 0, 0, 0, 0, ],    # motor_idx: 1(left_back_big), 2(left_back_small)
-                                   [0, 0, 0, 0, -2, -2, -2],     # motor_idx: 4(left_front_big), 5(left_front_small)
-                                   [0, 0, 0, 0, -2, -2, -2],     # motor_idx: 7(right_front_big), 8(right_front_small)
-                                   [-2, -2, -2, 0, 0, 0, 0]]    # motor_idx: 10(right_back_big), 11(right_back_small)
-        
-        #* for init state
-        # motor_vertical_distance = np.array(motor_vertical_distance) - 14.142    # 13562373095
-        
-
-        motor_horizontal_distance = [[-2.5, -6.5, -6.5, 5.295, 1.5],        # motor_idx: 1(left_back_big), 2(left_back_small)
-                                     [0, -4, 0.887, 5.295, 4],          # motor_idx: 4(left_front_big), 5(left_front_small)
-                                     [0, -4, 0.887, 5.295, 4],          # motor_idx: 7(right_front_big), 8(right_front_small)
-                                     [-2.5, -6.5, -6.5, 5.295, 1.5]]        # motor_idx: 10(right_back_big), 11(right_back_small)
-        
-
-        motor_vertical_distance = [[0, 0, 0, 0, 0, 3, 3, 3, 0,              0, -3, -3, -3, 0, 1, -3, 0, 0],
-                                   [0, 1, -3, 0, 0, -3, -3, -3, 0,        0, 3, 3, 3, 0, 0, 0, 0, 0],
-                                   [0, 3, 3, 3, 0, 0, 0, 0, 0,              0, 1, -3, 0, 0, -3, -3, -3, 0],
-                                   [0, -3, -3, -3, 0, 1, -3, 0, 0,        0, 0, 0, 0, 0, 3, 3, 3, 0]]
+    '''
+    def get_step_position_forward(self):   
+        top, mid, bot, push = 3, 0, -3, 2
+        #! go forward
+        motor_vertical_distance = [[0, 0, 0, 0, 0, top, top, top, 0,              0, bot, bot, bot, 0, push, bot, 0, 0],
+                                   [0, push, bot, 0, 0, bot, bot, bot, 0,        0, top, top, top, 0, 0, 0, 0, 0],
+                                   [0, top, top, top, 0, 0, 0, 0, 0,              0, push, bot, 0, 0, bot, bot, bot, 0],
+                                   [0, bot, bot, bot, 0, push, bot, 0, 0,        0, 0, 0, 0, 0, top, top, top, 0]]
 
         motor_horizontal_distance = [[0, 0, 0, 0, 0, 0, 0, 0, 0,            -4, -4, -4, -4, -4, -4, 0, 4, 4],
                                      [-4, -4, 0, 4, 4, 4, 4, 4, 4,          0, 0, 0, 0, 0, 0, 0, 0, 0],
                                      [0, 0, 0, 0, 0, 0, 0, 0, 0,            -4, -4, 0, 4, 4, 4, 4, 4, 4],
                                      [-4, -4, -4, -4, -4, -4, 0, 4, 4,      0, 0, 0, 0, 0, 0, 0, 0, 0]]
-
-        
         
         motor_horizontal_distance = np.array(motor_horizontal_distance)
         motor_vertical_distance = np.array(motor_vertical_distance)
 
+        a = 0.5
+        motor_horizontal_distance[0] = motor_horizontal_distance[0] - a
+        motor_horizontal_distance[3] = motor_horizontal_distance[3] - a
+        motor_horizontal_distance[1] = motor_horizontal_distance[1] + a
+        motor_horizontal_distance[2] = motor_horizontal_distance[2] + a
+
         return motor_vertical_distance, motor_horizontal_distance
 
-    def convert_positions_to_angles(self):
-        vertical_positions, horizontal_positions = self.get_step_position()
+    def get_step_position_right(self):   
+        top, mid, bot, push = 2, 0, -2, 1
+        #! rotate left
+        motor_vertical_distance = [[0, top, top, top, 0, bot, bot, bot, 0, push, push],
+                                   [0, bot, bot, bot, 0, top, top, top, 0, 0, 0],
+                                   [0, 0, 0, 0, 0, push, bot, 0, 0, bot, bot],
+                                   [0, push, bot, 0, 0, 0, 0, 0, 0, top, top]]
+
+        motor_horizontal_distance = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                     [-4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4],
+                                     [0, 0, 0, 0, 0, 0, 3, 6, 6, 6, 0],
+                                     [-4, -4, 0, 2, 2, 2, 2, 2, 2, 2, -4]]
+        
+        motor_horizontal_distance = np.array(motor_horizontal_distance)
+        motor_vertical_distance = np.array(motor_vertical_distance)
+
+        a = 0.5
+        motor_horizontal_distance[0] = motor_horizontal_distance[0] - a
+        motor_horizontal_distance[3] = motor_horizontal_distance[3] - a
+        motor_horizontal_distance[1] = motor_horizontal_distance[1] + a
+        motor_horizontal_distance[2] = motor_horizontal_distance[2] + a
+
+        return motor_vertical_distance, motor_horizontal_distance
+
+    def get_step_position_left(self):   
+        top, mid, bot, push = 2, 0, -2, 1
+        #! rotate left
+        motor_vertical_distance = [[0, push, bot, 0, 0, 0, 0, 0, 0, top, top],
+                                   [0, 0, 0, 0, 0, push, bot, 0, 0, bot, bot],
+                                   [0, bot, bot, bot, 0, top, top, top, 0, 0, 0],
+                                   [0, top, top, top, 0, bot, bot, bot, 0, push, push]
+                                   ]
+
+        motor_horizontal_distance = [[-4, -4, 0, 2, 2, 2, 2, 2, 2, 2, -4],
+                                     [0, 0, 0, 0, 0, 0, 3, 6, 6, 6, 0],
+                                     [-4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4],
+                                     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]        
+        
+        motor_horizontal_distance = np.array(motor_horizontal_distance)
+        motor_vertical_distance = np.array(motor_vertical_distance)
+
+        a = 0.5
+        motor_horizontal_distance[0] = motor_horizontal_distance[0] - a
+        motor_horizontal_distance[3] = motor_horizontal_distance[3] - a
+        motor_horizontal_distance[1] = motor_horizontal_distance[1] + a
+        motor_horizontal_distance[2] = motor_horizontal_distance[2] + a
+
+        return motor_vertical_distance, motor_horizontal_distance
+
+        
+        
+        
+    def convert_positions_to_angles(self, positions=None):
+        vertical_positions, horizontal_positions = positions
         vertical_positions = vertical_positions + 14.142
         _, step_num = horizontal_positions.shape
         motor_angle_list = np.zeros((12, step_num), dtype=float)
@@ -221,11 +315,9 @@ class Motor():
                 motor_angle_list[leg_idx*3+1][step] = small_motor_angle
         # float to int
         motor_angle_list = motor_angle_list.astype(int)
-        self.angles = motor_angle_list
         
         return motor_angle_list
-
-
+    
 
     # def safe_small(init_angle):
     #     return np.clip(init_angle, min=, max=)
@@ -282,9 +374,9 @@ class Motor():
         position_limits = {
             1: (1648, 2448),
             2: (1598, 2548),
-            4: (1648, 2448),
+            4: (1548, 2448),
             5: (1628, 2400),
-            7: (1648, 2448),
+            7: (1648, 2548),
             8: (1700, 2468),
             10: (1648, 2448),
             11: (1548, 2498),
